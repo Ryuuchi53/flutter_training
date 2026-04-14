@@ -134,9 +134,18 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                               ),
                               validator: (v) {
-                                if (v == null || v.length < 6) {
-                                  return 'At least 6 characters';
+                                if (v == null || v.isEmpty) {
+                                  return 'Password is required';
                                 }
+
+                                final passwordRegex = RegExp(
+                                  r'^(?=.*[a-z])(?=.*[A-Z])(?=.*[\W_]).{8,}$',
+                                );
+
+                                if (!passwordRegex.hasMatch(v)) {
+                                  return 'Min 8 chars, include upper, lower & special character';
+                                }
+
                                 return null;
                               },
                             ),
