@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class AppDrawer extends StatelessWidget {
   final String currentRoute;
@@ -60,10 +61,22 @@ class AppDrawer extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // CircleAvatar(
+                    //   radius: 30,
+                    //   backgroundColor: Colors.white,
+                    //   child: Icon(Icons.person),
+                    // ),
                     CircleAvatar(
                       radius: 30,
                       backgroundColor: Colors.white,
-                      child: Icon(Icons.person),
+                      child: ClipOval(
+                        child: SvgPicture.asset(
+                          'assets/avatar.svg',
+                          width: 40,
+                          height: 40,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
                     ),
                     SizedBox(height: 10),
                     Text(
