@@ -12,14 +12,18 @@ class AppDrawer extends StatelessWidget {
     this.prefilledName,
   });
 
-  void _navigate(BuildContext context, String route) {
+  void _navigate(BuildContext context, String? route) {
     Navigator.pop(context);
 
+    if (route == null) return;
     if (currentRoute == route) return;
 
     Navigator.of(context).pushNamed(
       route,
-      arguments: {'email': prefilledEmail ?? 'user@email.com', 'name': prefilledName ?? 'User'},
+      arguments: {
+        'email': prefilledEmail ?? 'user@email.com',
+        'name': prefilledName ?? 'User',
+      },
     );
   }
 
@@ -87,8 +91,8 @@ class AppDrawer extends StatelessWidget {
               /// NAV ITEMS
               _item(context, Icons.home_rounded, 'Menu', '/menu'),
               _item(context, Icons.check_circle_outline, 'To-Do', '/todos'),
-              _item(context, Icons.person_outline, 'Profile', '/profile'),
-              _item(context, Icons.settings_outlined, 'Settings', '/settings'),
+              _item(context, Icons.person_outline, 'Profile', null),
+              _item(context, Icons.settings_outlined, 'Settings', null),
 
               const Spacer(),
 
@@ -128,7 +132,7 @@ class AppDrawer extends StatelessWidget {
     BuildContext context,
     IconData icon,
     String title,
-    String route,
+    String? route,
   ) {
     final isActive = currentRoute == route;
 

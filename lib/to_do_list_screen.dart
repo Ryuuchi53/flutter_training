@@ -342,6 +342,12 @@ class _ToDoListScreenState extends State<ToDoListScreen> {
                         : ReorderableListView.builder(
                             buildDefaultDragHandles: false,
                             padding: const EdgeInsets.symmetric(horizontal: 16),
+                            proxyDecorator: (child, index, animation) {
+                              return Material(
+                                color: Colors.transparent,
+                                child: child,
+                              );
+                            },
                             itemCount: _tasks.length,
                             onReorder: (oldIndex, newIndex) {
                               setState(() {
@@ -381,6 +387,7 @@ class _ToDoListScreenState extends State<ToDoListScreen> {
                                     title: Text(
                                       task['title'],
                                       style: TextStyle(
+                                        fontWeight: FontWeight.bold,
                                         decoration: task['isDone']
                                             ? TextDecoration.lineThrough
                                             : null,
