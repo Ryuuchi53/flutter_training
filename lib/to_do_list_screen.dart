@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_training_full/app_drawer.dart';
 import 'package:flutter_training_full/app_theme.dart';
 
 class ToDoListScreen extends StatefulWidget {
-  const ToDoListScreen({super.key});
+  final String email;
+  final String name;
+
+  const ToDoListScreen({super.key, required this.email, required this.name});
 
   @override
   State<ToDoListScreen> createState() => _ToDoListScreenState();
@@ -36,27 +40,14 @@ class _ToDoListScreenState extends State<ToDoListScreen> {
     });
   }
 
-  void _logout() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Logout successful 👋', textAlign: TextAlign.center),
-      ),
-    );
-    Navigator.of(context).pushReplacementNamed('/');
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Tasks'),
-        actions: [
-          IconButton(
-            onPressed: _logout,
-            icon: const Icon(Icons.logout_rounded),
-          ),
-        ],
+        title: const Text('To-Do'),
       ),
+
+      drawer: AppDrawer(currentRoute: '/todos', prefilledEmail: widget.email, prefilledName: widget.name),
 
       /// BACKGROUND
       body: Container(

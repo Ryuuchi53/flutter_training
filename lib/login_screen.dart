@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_training_full/app_drawer.dart';
 import 'package:flutter_training_full/app_theme.dart';
+import 'package:flutter_training_full/menu_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -29,7 +31,13 @@ class _LoginScreenState extends State<LoginScreen> {
         content: Text('Login successful 🎉', textAlign: TextAlign.center),
       ),
     );
-    Navigator.of(context).pushReplacementNamed('/todos');
+    // Navigator.of(context).pushReplacementNamed('/menu');
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => MenuScreen(email: _emailController.text, name: ''),
+      ),
+    );
   }
 
   @override

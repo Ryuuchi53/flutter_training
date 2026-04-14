@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_training_full/app_theme.dart';
+import 'package:flutter_training_full/menu_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -38,7 +39,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ),
     );
 
-    Navigator.of(context).pop(); // back to login
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => MenuScreen(email: _emailController.text, name: _nameController.text),
+      ),
+    );
   }
 
   @override
