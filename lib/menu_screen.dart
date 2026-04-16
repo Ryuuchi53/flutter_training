@@ -115,7 +115,7 @@ class _MenuScreenState extends State<MenuScreen> {
 
     if (isValidUrl) {
       imageWidget = Image.network(
-        imageUrl!,
+        imageUrl,
         height: 160,
         width: double.infinity,
         fit: BoxFit.cover,

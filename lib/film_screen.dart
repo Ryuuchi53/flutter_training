@@ -117,7 +117,7 @@ class _FilmScreenState extends State<FilmScreen> {
 
     if (isValidUrl) {
       imageWidget = Image.network(
-        imageUrl!,
+        imageUrl,
         height: 160,
         width: double.infinity,
         fit: BoxFit.cover,
