@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_training_full/app_theme.dart';
-import 'package:flutter_training_full/menu_screen.dart';
+import 'package:flutter_training_full/login_screen.dart';
+import 'package:http/http.dart' as http;
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -18,6 +21,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -28,23 +32,75 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  void _register() {
+  Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
+    if (_isLoading) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Account created! (Demo)'),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    setState(() => _isLoading = true);
 
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => MenuScreen(email: _emailController.text, name: _nameController.text),
-      ),
-    );
+    try {
+      const url = 'http://blogs.icu.gov.my/api/register';
+
+      final name = _nameController.text.trim();
+      final email = _emailController.text.trim();
+      final password = _passwordController.text.trim();
+      final passwordConfirm = _confirmPasswordController.text.trim();
+
+      final body = jsonEncode({
+        'name': name,
+        'email': email,
+        'password': password,
+        'password_confirmation': passwordConfirm,
+      });
+      final headers = {'Content-Type': 'application/json'};
+
+      final response = await http.post(
+        Uri.parse(url),
+        headers: headers,
+        body: body,
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (!mounted) return;
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(data['message'] ?? 'Account created successfully!', textAlign: TextAlign.center),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => LoginScreen(),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              data['message'] ?? 'Registration failed. Please try again.',
+              textAlign: TextAlign.center,
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   @override
@@ -227,19 +283,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                             /// REGISTER BUTTON
                             FilledButton(
-                              onPressed: _register,
+                              onPressed: _isLoading ? null : _register,
                               style: FilledButton.styleFrom(
                                 backgroundColor: AppColors.deepPurple,
                                 foregroundColor: Colors.white,
                               ),
-                              child: const Text('Create account'),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text('Create account'),
+                                  if (_isLoading) ...[
+                                    const SizedBox(width: 10),
+                                    const SizedBox(
+                                      height: 16,
+                                      width: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
                             ),
 
                             const SizedBox(height: 12),
 
                             /// BACK TO LOGIN
                             TextButton(
-                              onPressed: () => Navigator.pop(context),
+                              onPressed: () => Navigator.of(context).pushNamed('/login'),
                               child: Text(
                                 'Already have an account? Sign in',
                                 style: TextStyle(

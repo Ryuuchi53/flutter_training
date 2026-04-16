@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_training_full/app_theme.dart';
 import 'package:flutter_training_full/menu_screen.dart';
+import 'package:http/http.dart' as http;
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -14,6 +17,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -22,21 +26,65 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _signIn() {
+  Future<void> _signIn() async {
     if (!_formKey.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Login successful 🎉', textAlign: TextAlign.center),
-      ),
-    );
-    // Navigator.of(context).pushReplacementNamed('/menu');
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => MenuScreen(email: _emailController.text, name: ''),
-      ),
-    );
+    if (_isLoading) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      const url = 'http://blogs.icu.gov.my/api/login';
+
+      final email = _emailController.text.trim();
+      final password = _passwordController.text.trim();
+
+      final body = jsonEncode({'email': email, 'password': password});
+      final headers = {'Content-Type': 'application/json'};
+
+      final response = await http.post(
+        Uri.parse(url),
+        headers: headers,
+        body: body,
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (!mounted) return;
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(data['message'] ?? 'Login successful 🎉', textAlign: TextAlign.center),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => MenuScreen(email: data['email'] ?? 'user@email.com', name: data['name'] ?? 'user'),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(data['message'] ?? 'Login failed. Please try again.', textAlign: TextAlign.center),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   @override
@@ -182,12 +230,28 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             const SizedBox(height: 8),
                             FilledButton(
-                              onPressed: _signIn,
+                              onPressed: _isLoading ? null : _signIn,
                               style: FilledButton.styleFrom(
                                 backgroundColor: AppColors.deepPurple,
                                 foregroundColor: Colors.white,
                               ),
-                              child: const Text('Sign in'),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text('Sign in'),
+                                  if (_isLoading) ...[
+                                    const SizedBox(width: 10),
+                                    const SizedBox(
+                                      height: 16,
+                                      width: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
                             ),
                             const SizedBox(height: 16),
                             Row(

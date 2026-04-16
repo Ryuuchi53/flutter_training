@@ -102,10 +102,11 @@ class AppDrawer extends StatelessWidget {
               const SizedBox(height: 10),
 
               /// NAV ITEMS
-              _item(context, Icons.home_rounded, 'Menu', '/menu'),
+              _item(context, Icons.newspaper_outlined, 'News', '/news'),
+              _item(context, Icons.local_movies, 'Films', '/films'),
               _item(context, Icons.check_circle_outline, 'To-Do', '/todos'),
-              _item(context, Icons.person_outline, 'Profile', null),
-              _item(context, Icons.settings_outlined, 'Settings', null),
+              // _item(context, Icons.person_outline, 'Profile', null),
+              // _item(context, Icons.settings_outlined, 'Settings', null),
 
               const Spacer(),
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_training_full/film_screen.dart';
 import 'package:flutter_training_full/login_screen.dart';
 import 'package:flutter_training_full/menu_screen.dart';
 import 'package:flutter_training_full/register_screen.dart';
@@ -22,7 +23,7 @@ class MainApp extends StatelessWidget {
         '/splash': (context) => const SplashScreen(),
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
-        '/menu': (context) {
+        '/news': (context) {
           final args = ModalRoute.of(context)?.settings.arguments as Map?;
 
           final email = args?['email'] ?? 'user@email.com';
@@ -37,6 +38,14 @@ class MainApp extends StatelessWidget {
           final name = args?['name'] ?? 'User';
 
           return ToDoListScreen(email: email, name: name);
+        },
+        '/films': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments as Map?;
+
+          final email = args?['email'] ?? 'user@email.com';
+          final name = args?['name'] ?? 'User';
+
+          return FilmScreen(email: email, name: name);
         },
       },
       home: const SplashScreen(),

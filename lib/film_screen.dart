@@ -3,18 +3,18 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_training_full/app_drawer.dart';
 
-class MenuScreen extends StatefulWidget {
+class FilmScreen extends StatefulWidget {
   final String email;
   final String name;
 
-  const MenuScreen({super.key, required this.email, required this.name});
+  const FilmScreen({super.key, required this.email, required this.name});
 
   @override
-  State<MenuScreen> createState() => _MenuScreenState();
+  State<FilmScreen> createState() => _FilmScreenState();
 }
 
-class _MenuScreenState extends State<MenuScreen> {
-  List articles = [];
+class _FilmScreenState extends State<FilmScreen> {
+  List films = [];
 
   bool isLoading = true;
   bool isChangingPage = false;
@@ -23,8 +23,6 @@ class _MenuScreenState extends State<MenuScreen> {
   final int pageSize = 5;
 
   bool hasMoreNext = true;
-
-  final String apiKey = '3d711ac90c324aa6bc95023bafbed293';
 
   @override
   void initState() {
@@ -37,7 +35,7 @@ class _MenuScreenState extends State<MenuScreen> {
       isLoading = true;
       page = 1;
       hasMoreNext = true;
-      articles = []; // optional: clears old list instantly
+      films = []; // optional: clears old list instantly
     });
 
     await _fetchData();
@@ -78,22 +76,26 @@ class _MenuScreenState extends State<MenuScreen> {
   }
 
   Future<void> _fetchData() async {
-    final url = Uri.parse(
-      'https://newsapi.org/v2/everything?q=technology&sortBy=publishedAt&pageSize=$pageSize&page=$page&apiKey=$apiKey',
-    );
+    final url = Uri.parse('https://ghibliapi.vercel.app/films');
 
     try {
       final response = await http.get(url);
 
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        List newArticles = data['articles'] ?? [];
+        final data = json.decode(response.body) as List;
+
+        // simulate pagination manually (API has no real pagination)
+        final start = (page - 1) * pageSize;
+        final end = start + pageSize;
+
+        List newFilms = data.sublist(
+          start,
+          end > data.length ? data.length : end,
+        );
 
         setState(() {
-          // 🔥 IMPORTANT: replace instead of append
-          articles = newArticles;
-
-          hasMoreNext = newArticles.length == pageSize;
+          films = newFilms;
+          hasMoreNext = end < data.length;
         });
       } else {
         hasMoreNext = false;
@@ -153,14 +155,14 @@ class _MenuScreenState extends State<MenuScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('News'),
+        title: const Text('Films'),
         actions: [
           IconButton(icon: const Icon(Icons.refresh), onPressed: fetchPage),
         ],
       ),
 
       drawer: AppDrawer(
-        currentRoute: '/news',
+        currentRoute: '/films',
         prefilledEmail: widget.email,
         prefilledName: widget.name,
       ),
@@ -186,9 +188,9 @@ class _MenuScreenState extends State<MenuScreen> {
                   Expanded(
                     child: ListView.builder(
                       padding: const EdgeInsets.all(16),
-                      itemCount: articles.length,
+                      itemCount: films.length,
                       itemBuilder: (context, index) {
-                        final news = articles[index];
+                        final film = films[index];
 
                         return Card(
                           color: Colors.white.withValues(alpha: 0.9),
@@ -196,23 +198,37 @@ class _MenuScreenState extends State<MenuScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              buildImage(news['urlToImage']),
+                              buildImage(film['image']),
                               Padding(
                                 padding: const EdgeInsets.all(12),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      news['title'] ?? 'No Title',
+                                      film['title'] ?? 'No Title',
                                       style: const TextStyle(
                                         fontWeight: FontWeight.bold,
+                                        fontSize: 18,
                                       ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '${film['original_title'] ?? ''} (${film['original_title_romanised'] ?? ''})',
+                                      style: const TextStyle(fontSize: 14),
                                     ),
                                     const SizedBox(height: 6),
                                     Text(
-                                      news['description'] ?? '',
+                                      film['description'] ?? '',
                                       maxLines: 3,
                                       overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      'Release Date: ${film['release_date'] ?? 'Unknown'}',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -224,7 +240,7 @@ class _MenuScreenState extends State<MenuScreen> {
                     ),
                   ),
 
-                  /// 🔘 PAGINATION CONTROLS
+                  /// 🔘 PAGINATION CONTROLS (same as MenuScreen)
                   Padding(
                     padding: const EdgeInsets.all(12),
                     child: Row(
@@ -244,6 +260,7 @@ class _MenuScreenState extends State<MenuScreen> {
                                 )
                               : const Icon(Icons.arrow_back),
                         ),
+
                         Text(
                           "Page $page",
                           style: const TextStyle(
@@ -252,11 +269,12 @@ class _MenuScreenState extends State<MenuScreen> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
+
                         ElevatedButton(
                           onPressed: (hasMoreNext && !isChangingPage)
                               ? goToNextPage
                               : null,
-                          child: isChangingPage && page < 1000
+                          child: isChangingPage
                               ? const SizedBox(
                                   height: 16,
                                   width: 16,
