@@ -1,17 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter_training_full/utils/shared_preferences_utils.dart';
 
 class AppDrawer extends StatelessWidget {
   final String currentRoute;
-  final String? prefilledEmail;
-  final String? prefilledName;
 
-  const AppDrawer({
-    super.key,
-    required this.currentRoute,
-    this.prefilledEmail,
-    this.prefilledName,
-  });
+  const AppDrawer({super.key, required this.currentRoute});
 
   void _navigate(BuildContext context, String? route) {
     Navigator.pop(context);
@@ -19,17 +13,17 @@ class AppDrawer extends StatelessWidget {
     if (route == null) return;
     if (currentRoute == route) return;
 
-    Navigator.of(context).pushNamed(
-      route,
-      arguments: {
-        'email': prefilledEmail ?? 'user@email.com',
-        'name': prefilledName ?? 'User',
-      },
-    );
+    Navigator.of(context).pushNamed(route);
   }
 
-  void _logout(BuildContext context) {
-    Navigator.pop(context);
+  void _logout(BuildContext context) async {
+    Navigator.pop(context); // close drawer if any
+
+    await SharedPreferencesUtils().clearSharedPreferences();
+    final token = SharedPreferencesUtils().getStorageToken;
+    print('TOKEN AFTER LOGOUT: "$token"');
+
+    if (!context.mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -37,11 +31,14 @@ class AppDrawer extends StatelessWidget {
       ),
     );
 
-    Navigator.of(context).pushReplacementNamed('/');
+    Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
   }
 
   @override
   Widget build(BuildContext context) {
+    final name = SharedPreferencesUtils().getSharedPrefsName;
+    final email = SharedPreferencesUtils().getSharedPrefsEmail;
+
     return Drawer(
       child: Container(
         decoration: const BoxDecoration(
@@ -87,14 +84,8 @@ class AppDrawer extends StatelessWidget {
                         fontSize: 18,
                       ),
                     ),
-                    Text(
-                      prefilledName ?? 'User Name',
-                      style: TextStyle(color: Colors.white70),
-                    ),
-                    Text(
-                      prefilledEmail ?? 'user@email.com',
-                      style: TextStyle(color: Colors.white70),
-                    ),
+                    Text(name, style: TextStyle(color: Colors.white70)),
+                    Text(email, style: TextStyle(color: Colors.white70)),
                   ],
                 ),
               ),
@@ -105,9 +96,7 @@ class AppDrawer extends StatelessWidget {
               _item(context, Icons.newspaper_outlined, 'News', '/news'),
               _item(context, Icons.local_movies, 'Films', '/films'),
               _item(context, Icons.check_circle_outline, 'To-Do', '/todos'),
-              // _item(context, Icons.person_outline, 'Profile', null),
-              // _item(context, Icons.settings_outlined, 'Settings', null),
-
+              
               const Spacer(),
 
               /// LOGOUT (WHITE CARD)

@@ -4,10 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_training_full/app_drawer.dart';
 
 class FilmScreen extends StatefulWidget {
-  final String email;
-  final String name;
-
-  const FilmScreen({super.key, required this.email, required this.name});
+  const FilmScreen({super.key});
 
   @override
   State<FilmScreen> createState() => _FilmScreenState();
@@ -162,10 +159,7 @@ class _FilmScreenState extends State<FilmScreen> {
       ),
 
       drawer: AppDrawer(
-        currentRoute: '/films',
-        prefilledEmail: widget.email,
-        prefilledName: widget.name,
-      ),
+        currentRoute: '/films'),
 
       body: Container(
         decoration: const BoxDecoration(

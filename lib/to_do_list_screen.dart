@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_training_full/app_drawer.dart';
 import 'package:flutter_training_full/app_theme.dart';
+import 'package:flutter_training_full/todo_api.dart';
+import 'package:flutter_training_full/utils/shared_preferences_utils.dart';
 
 class ToDoListScreen extends StatefulWidget {
-  final String email;
-  final String name;
-
-  const ToDoListScreen({super.key, required this.email, required this.name});
+  const ToDoListScreen({super.key});
 
   @override
   State<ToDoListScreen> createState() => _ToDoListScreenState();
@@ -16,40 +15,168 @@ class _ToDoListScreenState extends State<ToDoListScreen> {
   final _titleController = TextEditingController();
   final _descController = TextEditingController();
 
-  final List<Map<String, dynamic>> _tasks = [];
+  late TodoApi api;
 
-  void _addTask() {
+  List<Map<String, dynamic>> _tasks = [];
+  bool _loading = false;
+
+  bool _isDone(dynamic value) {
+    return value == true || value == 1 || value == '1';
+  }
+
+  DateTime? _selectedDate;
+  List<Map<String, dynamic>> get _displayTasks {
+    if (_selectedDate == null) return _tasks;
+
+    return _tasks.where((task) {
+      final taskDate = DateTime.parse(task['created_at']);
+      return taskDate.year == _selectedDate!.year &&
+          taskDate.month == _selectedDate!.month &&
+          taskDate.day == _selectedDate!.day;
+    }).toList();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    final token = SharedPreferencesUtils().getStorageToken;
+    _selectedDate = DateTime.now();
+
+    api = TodoApi(baseUrl: 'http://10.0.2.2:8000/api', token: token);
+
+    _loadTasks();
+  }
+
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+    );
+
+    if (picked != null) {
+      _setSelectedDate(picked);
+    }
+  }
+
+  void _setSelectedDate(DateTime date) {
+    setState(() {
+      _selectedDate = date;
+    });
+  }
+
+  Future<void> _loadTasks() async {
+    setState(() => _loading = true);
+
+    try {
+      final data = await api.fetchTasks();
+
+      final tasks = List<Map<String, dynamic>>.from(data).map((task) {
+        return {...task, 'isDone': task['isDone'] ?? 0};
+      }).toList();
+
+      // 👇 SORT BY created_at (newest first)
+      tasks.sort((a, b) {
+        final aDate = DateTime.parse(a['created_at']);
+        final bDate = DateTime.parse(b['created_at']);
+        return bDate.compareTo(aDate); // DESC order
+      });
+
+      setState(() {
+        _tasks = tasks;
+      });
+      if (_selectedDate != null) {
+        _setSelectedDate(_selectedDate!);
+      }
+    } catch (e) {
+      debugPrint('Error loading tasks: $e');
+    }
+
+    setState(() => _loading = false);
+  }
+
+  Future<void> _addTask() async {
     final title = _titleController.text.trim();
     final desc = _descController.text.trim();
 
     if (title.isEmpty) return;
 
-    setState(() {
-      _tasks.add({'title': title, 'description': desc, 'isDone': false});
-    });
+    try {
+      final newTask = await api.createTask({
+        'title': title,
+        'content': desc,
+        'isDone': 0,
+      });
 
-    _titleController.clear();
-    _descController.clear();
-    FocusScope.of(context).unfocus();
+      final safeTask = {
+        ...newTask,
+        'isDone': newTask['isDone'] ?? 0, // 👈 FIX NULL
+      };
+
+      setState(() {
+        _tasks.insert(0, safeTask);
+      });
+
+      if (_selectedDate != null) {
+        _setSelectedDate(_selectedDate!);
+      }
+
+      _titleController.clear();
+      _descController.clear();
+    } catch (e) {
+      debugPrint('Create failed: $e');
+    }
   }
 
-  void _toggleTask(int index) {
+  Future<void> _toggleTask(int index) async {
+    final oldTask = _tasks[index];
+
+    final current = _isDone(oldTask['isDone']);
+    final newValue = !current;
+
     setState(() {
-      _tasks[index]['isDone'] = !_tasks[index]['isDone'];
+      _tasks[index] = {...oldTask, 'isDone': newValue};
     });
+
+    try {
+      await api.updateTask(oldTask['id'].toString(), {
+        ...oldTask,
+        'isDone': newValue,
+      });
+    } catch (e) {
+      debugPrint('Update failed: $e');
+
+      // ❌ rollback if API fails
+      setState(() {
+        _tasks[index] = oldTask;
+      });
+    }
   }
 
-  void _deleteTask(int index) {
-    setState(() {
-      _tasks.removeAt(index);
-    });
+  Future<void> _deleteTask(int index) async {
+    final task = _tasks[index];
+
+    final removed = _tasks.removeAt(index);
+    setState(() {});
+
+    try {
+      await api.deleteTask(task['id'].toString());
+    } catch (e) {
+      debugPrint('Delete failed: $e');
+
+      setState(() {
+        _tasks.insert(index, removed);
+      });
+    }
   }
 
   void _editTask(int index) {
     final task = _tasks[index];
 
     final editTitle = TextEditingController(text: task['title']);
-    final editDesc = TextEditingController(text: task['description']);
+    final editDesc = TextEditingController(text: task['content']);
 
     showModalBottomSheet(
       context: context,
@@ -156,11 +283,19 @@ class _ToDoListScreenState extends State<ToDoListScreen> {
                     /// SAVE
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () {
+                        onPressed: () async {
+                          final updated = {
+                            ...task,
+                            'title': editTitle.text.trim(),
+                            'content': editDesc.text.trim(),
+                          };
+
                           setState(() {
-                            _tasks[index]['title'] = editTitle.text.trim();
-                            _tasks[index]['description'] = editDesc.text.trim();
+                            _tasks[index] = updated;
                           });
+
+                          await api.updateTask(task['id'], updated);
+
                           Navigator.pop(context);
                         },
                         style: ElevatedButton.styleFrom(
@@ -196,17 +331,6 @@ class _ToDoListScreenState extends State<ToDoListScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          ReorderableDragStartListener(
-            index: index,
-            child: Icon(
-              Icons.drag_indicator_rounded,
-              color: Colors.grey.shade600,
-              size: 22,
-            ),
-          ),
-
-          const SizedBox(width: 6),
-
           Material(
             color: Colors.blue.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(20),
@@ -243,19 +367,12 @@ class _ToDoListScreenState extends State<ToDoListScreen> {
     );
   }
 
-  int get _completedCount =>
-      _tasks.where((task) => task['isDone'] == true).length;
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('To-Do')),
 
-      drawer: AppDrawer(
-        currentRoute: '/todos',
-        prefilledEmail: widget.email,
-        prefilledName: widget.name,
-      ),
+      drawer: AppDrawer(currentRoute: '/todos'),
 
       body: Container(
         decoration: const BoxDecoration(
@@ -272,7 +389,7 @@ class _ToDoListScreenState extends State<ToDoListScreen> {
 
               /// ✅ COUNTER
               Text(
-                "Completed: $_completedCount / ${_tasks.length}",
+                "Completed: ${_displayTasks.where((task) => _isDone(task['isDone'])).length} / ${_displayTasks.length}",
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 16,
@@ -280,6 +397,21 @@ class _ToDoListScreenState extends State<ToDoListScreen> {
                 ),
               ),
 
+              if (_selectedDate != null)
+                Text(
+                  "Tasks on: ${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}",
+                  style: const TextStyle(color: Colors.white),
+                ),
+
+              const SizedBox(height: 10),
+
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: ElevatedButton(
+                  onPressed: _pickDate,
+                  child: const Text("Select Date"),
+                ),
+              ),
               const SizedBox(height: 12),
 
               /// INPUT CARD
@@ -332,36 +464,32 @@ class _ToDoListScreenState extends State<ToDoListScreen> {
                 child: Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 500),
-                    child: _tasks.isEmpty
+                    child: _loading
+                        ? const Center(
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                            ),
+                          )
+                        : _tasks.isEmpty
                         ? const Center(
                             child: Text(
                               'No tasks yet ✨',
                               style: TextStyle(color: Colors.white),
                             ),
                           )
-                        : ReorderableListView.builder(
-                            buildDefaultDragHandles: false,
+                        : ListView.builder(
                             padding: const EdgeInsets.symmetric(horizontal: 16),
-                            proxyDecorator: (child, index, animation) {
-                              return Material(
-                                color: Colors.transparent,
-                                child: child,
-                              );
-                            },
-                            itemCount: _tasks.length,
-                            onReorder: (oldIndex, newIndex) {
-                              setState(() {
-                                if (newIndex > oldIndex) newIndex -= 1;
-
-                                final item = _tasks.removeAt(oldIndex);
-                                _tasks.insert(newIndex, item);
-                              });
-                            },
+                            itemCount: _selectedDate == null
+                                ? _tasks.length
+                                : _displayTasks.length,
                             itemBuilder: (context, index) {
-                              final task = _tasks[index];
+                              final task = _selectedDate == null
+                                  ? _tasks[index]
+                                  : _displayTasks[index];
+                              final isDone = _isDone(task['isDone']);
 
                               return Container(
-                                key: ValueKey(index),
+                                key: ValueKey(task['id']),
                                 margin: const EdgeInsets.only(bottom: 12),
                                 width: double.infinity,
 
@@ -380,26 +508,26 @@ class _ToDoListScreenState extends State<ToDoListScreen> {
                                     ),
 
                                     leading: Checkbox(
-                                      value: task['isDone'],
+                                      value: isDone,
                                       onChanged: (_) => _toggleTask(index),
                                     ),
 
                                     title: Text(
-                                      task['title'],
+                                      task['title'] ?? '',
                                       style: TextStyle(
                                         fontWeight: FontWeight.bold,
-                                        decoration: task['isDone']
+                                        decoration: isDone
                                             ? TextDecoration.lineThrough
                                             : null,
                                       ),
                                     ),
 
                                     subtitle:
-                                        task['description'] != null &&
-                                            task['description']
+                                        task['content'] != null &&
+                                            task['content']
                                                 .toString()
                                                 .isNotEmpty
-                                        ? Text(task['description'])
+                                        ? Text(task['content'])
                                         : null,
 
                                     trailing: _buildTaskActions(index),

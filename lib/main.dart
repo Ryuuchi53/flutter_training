@@ -5,8 +5,13 @@ import 'package:flutter_training_full/menu_screen.dart';
 import 'package:flutter_training_full/register_screen.dart';
 import 'package:flutter_training_full/splash_screen.dart';
 import 'package:flutter_training_full/to_do_list_screen.dart';
+import 'package:flutter_training_full/utils/shared_preferences_utils.dart';
 
-void main() {
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await SharedPreferencesUtils().init();
+
   runApp(const MainApp());
 }
 
@@ -23,30 +28,9 @@ class MainApp extends StatelessWidget {
         '/splash': (context) => const SplashScreen(),
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
-        '/news': (context) {
-          final args = ModalRoute.of(context)?.settings.arguments as Map?;
-
-          final email = args?['email'] ?? 'user@email.com';
-          final name = args?['name'] ?? 'User';
-
-          return MenuScreen(email: email, name: name);
-        },
-        '/todos': (context) {
-          final args = ModalRoute.of(context)?.settings.arguments as Map?;
-
-          final email = args?['email'] ?? 'user@email.com';
-          final name = args?['name'] ?? 'User';
-
-          return ToDoListScreen(email: email, name: name);
-        },
-        '/films': (context) {
-          final args = ModalRoute.of(context)?.settings.arguments as Map?;
-
-          final email = args?['email'] ?? 'user@email.com';
-          final name = args?['name'] ?? 'User';
-
-          return FilmScreen(email: email, name: name);
-        },
+        '/news': (context) => const MenuScreen(),
+        '/todos': (context) => const ToDoListScreen(),
+        '/films': (context) => const FilmScreen(),
       },
       home: const SplashScreen(),
     );

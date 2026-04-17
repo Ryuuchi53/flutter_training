@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_training_full/utils/shared_preferences_utils.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -17,7 +18,22 @@ class _SplashScreenState extends State<SplashScreen> {
   Future<void> _goNext() async {
     await Future<void>.delayed(const Duration(milliseconds: 2200));
     if (!mounted) return;
-    Navigator.of(context).pushReplacementNamed('/login');
+
+    final token = SharedPreferencesUtils().getStorageToken;
+    final name = SharedPreferencesUtils().getSharedPrefsName;
+    final email = SharedPreferencesUtils().getSharedPrefsEmail;
+
+    if (token.trim().isNotEmpty) {
+      Navigator.of(context).pushReplacementNamed(
+        '/news',
+        arguments: <String, dynamic>{
+          'name': name,
+          'email': email,
+        },
+      );
+    } else {
+      Navigator.of(context).pushReplacementNamed('/login');
+    }
   }
 
   @override

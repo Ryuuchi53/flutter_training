@@ -40,7 +40,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _isLoading = true);
 
     try {
-      const url = 'http://blogs.icu.gov.my/api/register';
+      const url = 'http://10.0.2.2:8000/api/register';
 
       final name = _nameController.text.trim();
       final email = _emailController.text.trim();

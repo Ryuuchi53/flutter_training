@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_training_full/app_theme.dart';
 import 'package:flutter_training_full/menu_screen.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -18,6 +19,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
+  late SharedPreferences preferences;
 
   @override
   void dispose() {
@@ -34,7 +36,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      const url = 'http://blogs.icu.gov.my/api/login';
+      const url = 'http://10.0.2.2:8000/api/login';
 
       final email = _emailController.text.trim();
       final password = _passwordController.text.trim();
@@ -50,12 +52,28 @@ class _LoginScreenState extends State<LoginScreen> {
 
       final data = jsonDecode(response.body);
 
+      final sharedPreferences = await SharedPreferences.getInstance();
+
       if (!mounted) return;
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 && data['status'] == true) {
+        final userToken = data['access_token'] ?? '';
+        final userName = data['name'] ?? 'user';
+        final userEmail = data['email'] ?? 'user@email.com';
+
+        await sharedPreferences.setString('user_token', userToken);
+        await sharedPreferences.setString('user_name', userName);
+        await sharedPreferences.setString('user_email', userEmail);
+        print('TOKEN: ${sharedPreferences.getString('user_token') ?? ''}');
+
+        if (!mounted) return;
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(data['message'] ?? 'Login successful 🎉', textAlign: TextAlign.center),
+            content: Text(
+              data['message'] ?? 'Login successful 🎉',
+              textAlign: TextAlign.center,
+            ),
             backgroundColor: Colors.green,
           ),
         );
@@ -63,13 +81,16 @@ class _LoginScreenState extends State<LoginScreen> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (_) => MenuScreen(email: data['email'] ?? 'user@email.com', name: data['name'] ?? 'user'),
+            builder: (_) => MenuScreen(),
           ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(data['message'] ?? 'Login failed. Please try again.', textAlign: TextAlign.center),
+            content: Text(
+              data['message'] ?? 'Login failed. Please try again.',
+              textAlign: TextAlign.center,
+            ),
             backgroundColor: Colors.red,
           ),
         );
@@ -110,7 +131,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   const SizedBox(height: 16),
                   Icon(
-                    Icons.checklist_rtl_rounded,
+                    Icons.lock_outline_rounded,
                     size: 56,
                     color: Colors.white.withValues(alpha: 0.95),
                   ),

@@ -4,10 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_training_full/app_drawer.dart';
 
 class MenuScreen extends StatefulWidget {
-  final String email;
-  final String name;
-
-  const MenuScreen({super.key, required this.email, required this.name});
+  const MenuScreen({super.key});
 
   @override
   State<MenuScreen> createState() => _MenuScreenState();
@@ -160,10 +157,7 @@ class _MenuScreenState extends State<MenuScreen> {
       ),
 
       drawer: AppDrawer(
-        currentRoute: '/news',
-        prefilledEmail: widget.email,
-        prefilledName: widget.name,
-      ),
+        currentRoute: '/news'),
 
       body: Container(
         decoration: const BoxDecoration(
