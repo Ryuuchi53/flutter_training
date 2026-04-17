@@ -20,8 +20,6 @@ class AppDrawer extends StatelessWidget {
     Navigator.pop(context); // close drawer if any
 
     await SharedPreferencesUtils().clearSharedPreferences();
-    final token = SharedPreferencesUtils().getStorageToken;
-    print('TOKEN AFTER LOGOUT: "$token"');
 
     if (!context.mounted) return;
 

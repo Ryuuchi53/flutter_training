@@ -64,7 +64,6 @@ class _LoginScreenState extends State<LoginScreen> {
         await sharedPreferences.setString('user_token', userToken);
         await sharedPreferences.setString('user_name', userName);
         await sharedPreferences.setString('user_email', userEmail);
-        print('TOKEN: ${sharedPreferences.getString('user_token') ?? ''}');
 
         if (!mounted) return;
 
