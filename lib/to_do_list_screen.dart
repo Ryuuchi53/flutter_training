@@ -104,16 +104,15 @@ class _ToDoListScreenState extends State<ToDoListScreen> {
     if (title.isEmpty) return;
 
     try {
-      final newTask = await api.createTask({
+      final response = await api.createTask({
         'title': title,
         'content': desc,
         'isDone': 0,
       });
 
-      final safeTask = {
-        ...newTask,
-        'isDone': newTask['isDone'] ?? 0, // 👈 FIX NULL
-      };
+      final newTask = Map<String, dynamic>.from(response['data']);
+
+      final safeTask = {...newTask, 'isDone': newTask['isDone'] ?? 0};
 
       setState(() {
         _tasks.insert(0, safeTask);
@@ -125,8 +124,30 @@ class _ToDoListScreenState extends State<ToDoListScreen> {
 
       _titleController.clear();
       _descController.clear();
+
+      if (!mounted) return;
+
+      // ✅ SUCCESS SNACKBAR
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            response['message'] ?? 'Task created',
+            textAlign: TextAlign.center,
+          ),
+          backgroundColor: Colors.green,
+        ),
+      );
     } catch (e) {
-      debugPrint('Create failed: $e');
+      // ❌ ERROR SNACKBAR
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e.toString().replaceAll('Exception: ', ''),
+            textAlign: TextAlign.center,
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -156,19 +177,46 @@ class _ToDoListScreenState extends State<ToDoListScreen> {
   }
 
   Future<void> _deleteTask(int index) async {
-    final task = _tasks[index];
+    final messenger = ScaffoldMessenger.of(context);
 
+    final task = _tasks[index];
     final removed = _tasks.removeAt(index);
+
     setState(() {});
 
     try {
-      await api.deleteTask(task['id'].toString());
-    } catch (e) {
-      debugPrint('Delete failed: $e');
+      final response = await api.deleteTask(task['id'].toString());
 
+      if (!mounted) return;
+
+      // ✅ SUCCESS SNACKBAR
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            response['message'] ?? 'Task deleted',
+            textAlign: TextAlign.center,
+          ),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      // ❌ rollback UI
       setState(() {
         _tasks.insert(index, removed);
       });
+
+      // ❌ ERROR SNACKBAR
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            e.toString().replaceAll('Exception: ', ''),
+            textAlign: TextAlign.center,
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -290,13 +338,49 @@ class _ToDoListScreenState extends State<ToDoListScreen> {
                             'content': editDesc.text.trim(),
                           };
 
-                          setState(() {
-                            _tasks[index] = updated;
-                          });
+                          try {
+                            final response = await api.updateTask(
+                              task['id'],
+                              updated,
+                            );
 
-                          await api.updateTask(task['id'], updated);
+                            if (!mounted) return; // 👈 IMPORTANT
 
-                          Navigator.pop(context);
+                            final updatedTask = Map<String, dynamic>.from(
+                              response['data'],
+                            );
+
+                            setState(() {
+                              _tasks[index] = {
+                                ...updatedTask,
+                                'isDone': updatedTask['isDone'] ?? 0,
+                              };
+                            });
+
+                            Navigator.pop(context);
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  response['message'] ?? 'Task updated',
+                                  textAlign: TextAlign.center,
+                                ),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                          } catch (e) {
+                            if (!mounted) return; // 👈 ALSO HERE
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  e.toString().replaceAll('Exception: ', ''),
+                                  textAlign: TextAlign.center,
+                                ),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF6A11CB),
@@ -307,6 +391,103 @@ class _ToDoListScreenState extends State<ToDoListScreen> {
                           ),
                         ),
                         child: const Text("Save"),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 10),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _confirmDelete(int index) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                /// HANDLE BAR
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                /// TITLE
+                const Text(
+                  "Delete Task",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                ),
+
+                const SizedBox(height: 10),
+
+                /// DESCRIPTION
+                const Text(
+                  "Are you sure you want to delete this task? This action cannot be undone.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 14, color: Colors.grey),
+                ),
+
+                const SizedBox(height: 20),
+
+                /// ACTIONS
+                Row(
+                  children: [
+                    /// CANCEL
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text("Cancel"),
+                      ),
+                    ),
+
+                    const SizedBox(width: 12),
+
+                    /// DELETE
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(context); // close sheet
+                          _deleteTask(index); // proceed delete
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text("Yes, Delete"),
                       ),
                     ),
                   ],
@@ -351,7 +532,7 @@ class _ToDoListScreenState extends State<ToDoListScreen> {
             borderRadius: BorderRadius.circular(20),
             child: InkWell(
               borderRadius: BorderRadius.circular(20),
-              onTap: () => _deleteTask(index),
+              onTap: () => _confirmDelete(index),
               child: const Padding(
                 padding: EdgeInsets.all(6),
                 child: Icon(

@@ -35,12 +35,13 @@ class TodoApi {
       body: jsonEncode(data),
     );
 
+    final body = jsonDecode(res.body);
+
     if (res.statusCode != 201 && res.statusCode != 200) {
-      throw Exception('Failed to create task');
+      throw Exception(body['message'] ?? 'Failed to create task');
     }
 
-    final body = jsonDecode(res.body);
-    return Map<String, dynamic>.from(body['data']);
+    return body;
   }
 
   Future<Map<String, dynamic>> updateTask(
@@ -53,22 +54,27 @@ class TodoApi {
       body: jsonEncode(data),
     );
 
+    final body = jsonDecode(res.body);
+
     if (res.statusCode != 200) {
-      throw Exception('Failed to update task');
+      throw Exception(body['message'] ?? 'Failed to update task');
     }
 
-    final body = jsonDecode(res.body);
-    return Map<String, dynamic>.from(body['data']);
+    return body;
   }
 
-  Future<void> deleteTask(String id) async {
+  Future<Map<String, dynamic>> deleteTask(String id) async {
     final res = await http.delete(
       Uri.parse('$baseUrl/blogs-api/$id'),
       headers: _headers,
     );
 
+    final body = jsonDecode(res.body);
+
     if (res.statusCode != 200 && res.statusCode != 204) {
-      throw Exception('Failed to delete task');
+      throw Exception(body['message'] ?? 'Failed to delete task');
     }
+
+    return body; // 👈 return message
   }
 }
