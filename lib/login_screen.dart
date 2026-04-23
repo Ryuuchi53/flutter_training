@@ -52,6 +52,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
       final data = jsonDecode(response.body);
 
+      // debugPrint('Login response data: $data');
+
       final sharedPreferences = await SharedPreferences.getInstance();
 
       if (!mounted) return;
@@ -60,10 +62,12 @@ class _LoginScreenState extends State<LoginScreen> {
         final userToken = data['access_token'] ?? '';
         final userName = data['name'] ?? 'user';
         final userEmail = data['email'] ?? 'user@email.com';
+        final expiresAt = data['expires_at'] ?? '';
 
         await sharedPreferences.setString('user_token', userToken);
         await sharedPreferences.setString('user_name', userName);
         await sharedPreferences.setString('user_email', userEmail);
+        await sharedPreferences.setString('expires_at', expiresAt);
 
         if (!mounted) return;
 
@@ -79,9 +83,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(
-            builder: (_) => MenuScreen(),
-          ),
+          MaterialPageRoute(builder: (_) => MenuScreen()),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(

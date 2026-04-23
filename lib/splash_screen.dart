@@ -22,14 +22,31 @@ class _SplashScreenState extends State<SplashScreen> {
     final token = SharedPreferencesUtils().getStorageToken;
     final name = SharedPreferencesUtils().getSharedPrefsName;
     final email = SharedPreferencesUtils().getSharedPrefsEmail;
+    final expiresAtStr = SharedPreferencesUtils().getExpiresAt;
 
-    if (token.trim().isNotEmpty) {
+    bool isExpired = false;
+    if (expiresAtStr.isNotEmpty) {
+      try {
+        DateTime expiresAt;
+        if (int.tryParse(expiresAtStr) != null) {
+          // Assume it's Unix timestamp in seconds
+          expiresAt = DateTime.fromMillisecondsSinceEpoch(
+            int.parse(expiresAtStr) * 1000,
+          );
+        } else {
+          // Assume it's ISO string
+          expiresAt = DateTime.parse(expiresAtStr);
+        }
+        isExpired = DateTime.now().toUtc().isAfter(expiresAt);
+      } catch (e) {
+        isExpired = true; // invalid date, treat as expired
+      }
+    }
+
+    if (token.trim().isNotEmpty && !isExpired) {
       Navigator.of(context).pushReplacementNamed(
         '/news',
-        arguments: <String, dynamic>{
-          'name': name,
-          'email': email,
-        },
+        arguments: <String, dynamic>{'name': name, 'email': email},
       );
     } else {
       Navigator.of(context).pushReplacementNamed('/login');

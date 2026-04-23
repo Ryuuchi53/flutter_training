@@ -15,6 +15,8 @@ class SharedPreferencesUtils {
   String get getSharedPrefsEmail =>
       sharedPrefsUtils.getString('user_email') ?? '';
 
+  String get getExpiresAt => sharedPrefsUtils.getString('expires_at') ?? '';
+
   Future<void> clearSharedPreferences() async {
     await sharedPrefsUtils.clear();
   }
@@ -29,5 +31,9 @@ class SharedPreferencesUtils {
 
   Future<void> setSharedPrefsEmail(String value) async {
     await sharedPrefsUtils.setString('user_email', value);
+  }
+
+  Future<void> setExpiresAt(String value) async {
+    await sharedPrefsUtils.setString('expires_at', value);
   }
 }

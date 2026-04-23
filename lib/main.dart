@@ -7,7 +7,6 @@ import 'package:flutter_training_full/splash_screen.dart';
 import 'package:flutter_training_full/to_do_list_screen.dart';
 import 'package:flutter_training_full/utils/shared_preferences_utils.dart';
 
-
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SharedPreferencesUtils().init();

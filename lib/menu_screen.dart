@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_training_full/app_drawer.dart';
+import 'package:flutter_training_full/utils/shared_preferences_utils.dart';
 
 class MenuScreen extends StatefulWidget {
   const MenuScreen({super.key});
@@ -23,10 +25,72 @@ class _MenuScreenState extends State<MenuScreen> {
 
   final String apiKey = '3d711ac90c324aa6bc95023bafbed293';
 
+  Timer? _logoutTimer;
+
   @override
   void initState() {
     super.initState();
+    _checkTokenExpiration();
     fetchPage();
+    _startLogoutTimer();
+  }
+
+  @override
+  void dispose() {
+    _logoutTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startLogoutTimer() {
+    _logoutTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
+      _checkTokenExpiration();
+    });
+  }
+
+  void _checkTokenExpiration() {
+    final expiresAtStr = SharedPreferencesUtils().getExpiresAt;
+    debugPrint('expiresAtStr: "$expiresAtStr"');
+    if (expiresAtStr.isEmpty) {
+      debugPrint('expiresAtStr is empty, skipping check');
+      return;
+    }
+    try {
+      DateTime expiresAt;
+      if (int.tryParse(expiresAtStr) != null) {
+        // Assume it's Unix timestamp in seconds
+        expiresAt = DateTime.fromMillisecondsSinceEpoch(
+          int.parse(expiresAtStr) * 1000,
+        );
+      } else {
+        // Assume it's ISO string
+        expiresAt = DateTime.parse(expiresAtStr);
+      }
+      debugPrint(
+        'expiresAt: $expiresAt, now UTC: ${DateTime.now().toUtc()}, isAfter: ${DateTime.now().toUtc().isAfter(expiresAt)}',
+      );
+      if (DateTime.now().toUtc().isAfter(expiresAt)) {
+        debugPrint('Token expired, logging out');
+        _logout();
+      }
+    } catch (e) {
+      debugPrint('Error parsing expiresAt: $e');
+    }
+  }
+
+  void _logout() async {
+    _logoutTimer?.cancel();
+    await SharedPreferencesUtils().clearSharedPreferences();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Session expired. Please login again.',
+          textAlign: TextAlign.center,
+        ),
+        backgroundColor: Colors.red,
+      ),
+    );
+    Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
   }
 
   Future<void> fetchPage() async {
@@ -156,8 +220,7 @@ class _MenuScreenState extends State<MenuScreen> {
         ],
       ),
 
-      drawer: AppDrawer(
-        currentRoute: '/news'),
+      drawer: AppDrawer(currentRoute: '/news'),
 
       body: Container(
         decoration: const BoxDecoration(

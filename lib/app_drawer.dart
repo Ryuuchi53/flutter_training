@@ -13,10 +13,34 @@ class AppDrawer extends StatelessWidget {
     if (route == null) return;
     if (currentRoute == route) return;
 
+    // Check if token is expired before navigating
+    final expiresAtStr = SharedPreferencesUtils().getExpiresAt;
+    if (expiresAtStr.isNotEmpty) {
+      try {
+        DateTime expiresAt;
+        if (int.tryParse(expiresAtStr) != null) {
+          // Assume it's Unix timestamp in seconds
+          expiresAt = DateTime.fromMillisecondsSinceEpoch(
+            int.parse(expiresAtStr) * 1000,
+          );
+        } else {
+          // Assume it's ISO string
+          expiresAt = DateTime.parse(expiresAtStr);
+        }
+        if (DateTime.now().toUtc().isAfter(expiresAt)) {
+          _logout(context, message: 'Session expired. Please login again.');
+          return;
+        }
+      } catch (e) {
+        _logout(context, message: 'Session expired. Please login again.');
+        return;
+      }
+    }
+
     Navigator.of(context).pushNamed(route);
   }
 
-  void _logout(BuildContext context) async {
+  void _logout(BuildContext context, {String message = 'Logged out 👋'}) async {
     Navigator.pop(context); // close drawer if any
 
     await SharedPreferencesUtils().clearSharedPreferences();
@@ -24,9 +48,7 @@ class AppDrawer extends StatelessWidget {
     if (!context.mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Logged out 👋', textAlign: TextAlign.center),
-      ),
+      SnackBar(content: Text(message, textAlign: TextAlign.center)),
     );
 
     Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
@@ -94,7 +116,7 @@ class AppDrawer extends StatelessWidget {
               _item(context, Icons.newspaper_outlined, 'News', '/news'),
               _item(context, Icons.local_movies, 'Films', '/films'),
               _item(context, Icons.check_circle_outline, 'To-Do', '/todos'),
-              
+
               const Spacer(),
 
               /// LOGOUT (WHITE CARD)

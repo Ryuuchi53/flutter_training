@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_training_full/app_drawer.dart';
+import 'package:flutter_training_full/utils/shared_preferences_utils.dart';
 
 class FilmScreen extends StatefulWidget {
   const FilmScreen({super.key});
@@ -21,10 +23,64 @@ class _FilmScreenState extends State<FilmScreen> {
 
   bool hasMoreNext = true;
 
+  Timer? _logoutTimer;
+
   @override
   void initState() {
     super.initState();
+    _checkTokenExpiration();
     fetchPage();
+    _startLogoutTimer();
+  }
+
+  @override
+  void dispose() {
+    _logoutTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startLogoutTimer() {
+    _logoutTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
+      _checkTokenExpiration();
+    });
+  }
+
+  void _checkTokenExpiration() {
+    final expiresAtStr = SharedPreferencesUtils().getExpiresAt;
+    if (expiresAtStr.isEmpty) return;
+    try {
+      DateTime expiresAt;
+      if (int.tryParse(expiresAtStr) != null) {
+        // Assume it's Unix timestamp in seconds
+        expiresAt = DateTime.fromMillisecondsSinceEpoch(
+          int.parse(expiresAtStr) * 1000,
+        );
+      } else {
+        // Assume it's ISO string
+        expiresAt = DateTime.parse(expiresAtStr);
+      }
+      if (DateTime.now().toUtc().isAfter(expiresAt)) {
+        _logout();
+      }
+    } catch (e) {
+      // Invalid date format, ignore or logout
+    }
+  }
+
+  void _logout() async {
+    _logoutTimer?.cancel();
+    await SharedPreferencesUtils().clearSharedPreferences();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Session expired. Please login again.',
+          textAlign: TextAlign.center,
+        ),
+        backgroundColor: Colors.red,
+      ),
+    );
+    Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
   }
 
   Future<void> fetchPage() async {
@@ -158,8 +214,7 @@ class _FilmScreenState extends State<FilmScreen> {
         ],
       ),
 
-      drawer: AppDrawer(
-        currentRoute: '/films'),
+      drawer: AppDrawer(currentRoute: '/films'),
 
       body: Container(
         decoration: const BoxDecoration(

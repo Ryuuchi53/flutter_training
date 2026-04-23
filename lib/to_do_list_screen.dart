@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_training_full/app_drawer.dart';
 import 'package:flutter_training_full/app_theme.dart';
@@ -20,6 +21,8 @@ class _ToDoListScreenState extends State<ToDoListScreen> {
   List<Map<String, dynamic>> _tasks = [];
   bool _loading = false;
 
+  Timer? _logoutTimer;
+
   bool _isDone(dynamic value) {
     return value == true || value == 1 || value == '1';
   }
@@ -40,12 +43,64 @@ class _ToDoListScreenState extends State<ToDoListScreen> {
   void initState() {
     super.initState();
 
+    _checkTokenExpiration();
     final token = SharedPreferencesUtils().getStorageToken;
     _selectedDate = DateTime.now();
 
     api = TodoApi(baseUrl: 'http://10.0.2.2:8000/api', token: token);
 
     _loadTasks();
+    _startLogoutTimer();
+  }
+
+  @override
+  void dispose() {
+    _logoutTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startLogoutTimer() {
+    _logoutTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
+      _checkTokenExpiration();
+    });
+  }
+
+  void _checkTokenExpiration() {
+    final expiresAtStr = SharedPreferencesUtils().getExpiresAt;
+    if (expiresAtStr.isEmpty) return;
+    try {
+      DateTime expiresAt;
+      if (int.tryParse(expiresAtStr) != null) {
+        // Assume it's Unix timestamp in seconds
+        expiresAt = DateTime.fromMillisecondsSinceEpoch(
+          int.parse(expiresAtStr) * 1000,
+        );
+      } else {
+        // Assume it's ISO string
+        expiresAt = DateTime.parse(expiresAtStr);
+      }
+      if (DateTime.now().toUtc().isAfter(expiresAt)) {
+        _logout();
+      }
+    } catch (e) {
+      // Invalid date format, ignore or logout
+    }
+  }
+
+  void _logout() async {
+    _logoutTimer?.cancel();
+    await SharedPreferencesUtils().clearSharedPreferences();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Session expired. Please login again.',
+          textAlign: TextAlign.center,
+        ),
+        backgroundColor: Colors.red,
+      ),
+    );
+    Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
   }
 
   Future<void> _pickDate() async {
