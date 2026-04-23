@@ -188,8 +188,9 @@ class _ToDoListScreenState extends State<ToDoListScreen> {
           content: Text(
             response['message'] ?? 'Task created',
             textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.black),
           ),
-          backgroundColor: Colors.green,
+          backgroundColor: Colors.lightBlueAccent,
         ),
       );
     } catch (e) {
@@ -250,8 +251,9 @@ class _ToDoListScreenState extends State<ToDoListScreen> {
           content: Text(
             response['message'] ?? 'Task deleted',
             textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.black),
           ),
-          backgroundColor: Colors.green,
+          backgroundColor: Colors.lightBlueAccent,
         ),
       );
     } catch (e) {
@@ -419,8 +421,9 @@ class _ToDoListScreenState extends State<ToDoListScreen> {
                                 content: Text(
                                   response['message'] ?? 'Task updated',
                                   textAlign: TextAlign.center,
+                                  style: TextStyle(color: Colors.black),
                                 ),
-                                backgroundColor: Colors.green,
+                                backgroundColor: Colors.lightBlueAccent,
                               ),
                             );
                           } catch (e) {
@@ -734,6 +737,9 @@ class _ToDoListScreenState extends State<ToDoListScreen> {
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(14),
                                   ),
+                                  color: isDone
+                                      ? const Color.fromARGB(255, 0, 0, 0)
+                                      : Colors.white.withValues(alpha: 0.9),
 
                                   child: ListTile(
                                     dense: true,
@@ -752,9 +758,11 @@ class _ToDoListScreenState extends State<ToDoListScreen> {
                                       task['title'] ?? '',
                                       style: TextStyle(
                                         fontWeight: FontWeight.bold,
-                                        decoration: isDone
-                                            ? TextDecoration.lineThrough
-                                            : null,
+                                        color: isDone
+                                            ? Colors.white.withValues(
+                                                alpha: 0.7,
+                                              )
+                                            : Colors.black,
                                       ),
                                     ),
 
@@ -763,7 +771,16 @@ class _ToDoListScreenState extends State<ToDoListScreen> {
                                             task['content']
                                                 .toString()
                                                 .isNotEmpty
-                                        ? Text(task['content'])
+                                        ? Text(
+                                            task['content'],
+                                            style: TextStyle(
+                                              color: isDone
+                                                  ? Colors.white.withValues(
+                                                      alpha: 0.7,
+                                                    )
+                                                  : Colors.black,
+                                            ),
+                                          )
                                         : null,
 
                                     trailing: _buildTaskActions(index),
